@@ -1,0 +1,1 @@
+A robot with a sound system that tracks a person wearing a blue shirt.

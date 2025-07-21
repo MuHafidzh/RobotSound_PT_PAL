@@ -1,0 +1,30 @@
+# Color Detection Configuration for YOLOv5 ROS2
+detection:
+  # Blue color detection in HSV
+  blue:
+    lower_hue: 105        # Lebih tinggi untuk biru tua
+    upper_hue: 140        # Range sempit untuk biru tua spesifik
+    lower_saturation: 50  # Tinggi untuk warna jenuh
+    upper_saturation: 255 # Maksimal
+    lower_value: 40       # Rendah untuk biru yang gelap
+    upper_value: 150      # Tidak terlalu terang untuk biru tua
+    min_percentage: 12.0  # Turunkan sedikit dari 18.0
+
+# YOLO Detection Parameters
+yolo:
+  target_size: 288
+  prob_threshold: 0.6
+  nms_threshold: 0.3
+  
+# Camera Settings
+camera:
+  width: 480
+  height: 360
+  fps: 30
+  buffer_size: 1
+
+# Performance Settings
+performance:
+  base_skip_frames: 3
+  timer_ms: 50
+  num_threads: 2
