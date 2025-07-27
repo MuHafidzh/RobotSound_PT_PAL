@@ -1,22 +1,36 @@
-# This is a ROS 2 project for an autonomous robot that can track and follow a person wearing a specific colored shirt using a YOLOv5-powered vision system. It features multiple control modes, including manual joystick control and autonomous following, integrated with a safety laser scanner.
+# 🤖 Person-Following Robot with Sound System
+
+A ROS 2 project for an autonomous robot that can track and follow a person wearing a specific colored shirt using a YOLOv5-powered vision system. It features multiple control modes, including manual joystick control and autonomous following, integrated with a safety laser scanner.
+
+---
 
 ## 🎥 Demo
-<video controls src="pal.mp4" title="PAL Robot Demo"></video>
+
+**(Note: To display a video here, you can upload `pal.mp4` to your repository and link to it, or convert it to a GIF and embed it like an image.)**
+
+Example with a GIF:
+`![Robot Demo](pal.gif)`
+
+---
 
 ## 📁 Workspace Structure
 
-    pal_ws/
-    ├── src/
-    │   ├── robot/                # Main robot controller (main.cpp, launch, etc)
-    │   ├── device/               # Hardware interface nodes (gpio, laser, motor, joyAndro)
-    │   ├── camera/               # YOLOv5 vision node (yolov5.cpp, launch, config)
-    │   ├── robot_interfaces/     # Custom ROS2 messages (JoyAndro.msg)
-    ├── start.sh                  # Bash script for setup IO and robotPAL.service 
-    └── README.md
+```bash
+pal_ws/
+├── src/
+│   ├── robot/                # Main robot controller (main.cpp, launch, etc)
+│   ├── device/               # Hardware interface nodes (gpio, laser, motor, joyAndro)
+│   ├── camera/               # YOLOv5 vision node (yolov5.cpp, launch, config)
+│   └── robot_interfaces/     # Custom ROS2 messages (JoyAndro.msg)
+├── start.sh                  # Bash script for setup IO and robotPAL.service
+└── README.md
+```
+
+---
 
 ## 📦 Custom Message
 
-**robot_interfaces/msg/JoyAndro.msg**
+**`robot_interfaces/msg/JoyAndro.msg`**
 ```text
 std_msgs/Header header  
 float32 x  
@@ -24,119 +38,152 @@ float32 y
 bool button_x  
 bool button_circle  
 bool button_triangle  
-bool button_square  
+bool button_square
 ```
 
+---
 
 ## 🧠 Node Overview
-A.  robot/main_node (main.cpp)
-    -   Fungsi: Node utama pengendali robot.
-    -   Mode:
-        -   IDLE: Robot berhenti.
-        -   MANUAL: Kontrol penuh via joystick Android (JoyAndro).
-        -   AUTO: Person following (mengikuti orang dengan YOLO).
-    -   Kontrol:
-        -   Joystick X/Y: Linear/angular velocity.
-        -   Button X: Masuk mode AUTO.
-        -   Button O: Masuk mode MANUAL.
-        -   Button Triangle: Masuk mode IDLE.
-        -   Button Square: Boost kecepatan saat ditekan.
-    -   Topic yang digunakan:
-        -   /device/joyAndro (sub): Data joystick Android.
-        -   /camera/detections (sub): Data deteksi YOLO.
-        -   /device/laser/distances (sub): Data sensor jarak.
-        -   /device/motor/encoder, /rpm, /vbus (sub): Data motor.
-        -   /device/motor/cmd_vel (pub): Perintah kecepatan motor.
 
-B.  device/joyandro_node (joyAndro.cpp)
-    -   Fungsi: Node pembaca joystick Android via Bluetooth.
-    -   Publish:
-        -   /device/joyAndro (robot_interfaces/msg/JoyAndro, 100Hz):
-            -   x, y: posisi stick
-            -   button_x, button_circle, button_triangle, button_square: status tombol
-    -   Catatan:
-        -   Jika tidak ada input, tetap publish data default (semua 0/false).
+* **A. `robot/main_node` (main.cpp)**
+    * **Function**: The main robot controller node.
+    * **Modes**:
+        * `IDLE`: The robot is stationary.
+        * `MANUAL`: Full control via an Android joystick (JoyAndro).
+        * `AUTO`: Person following using YOLO.
+    * **Controls**:
+        * Joystick X/Y: Controls linear/angular velocity.
+        * Button X: Enters `AUTO` mode.
+        * Button O: Enters `MANUAL` mode.
+        * Button Triangle: Enters `IDLE` mode.
+        * Button Square: Engages a speed boost when pressed.
+    * **Topics Used**:
+        * `/device/joyAndro` (sub): Data from the Android joystick.
+        * `/camera/detections` (sub): Detection data from YOLO.
+        * `/device/laser/distances` (sub): Data from the distance sensor.
+        * `/device/motor/encoder`, `/rpm`, `/vbus` (sub): Feedback from the motors.
+        * `/device/motor/cmd_vel` (pub): Velocity commands for the motors.
 
-C.  device/gpio_node
-    -   Fungsi: (Opsional, bisa di-nonaktifkan) Membaca tombol GPIO hardware.
-    -   Publish:
-        -   /device/gpio (std_msgs/UInt8MultiArray): Status tombol GPIO.
+* **B. `device/joyandro_node` (joyAndro.cpp)**
+    * **Function**: Reads input from an Android joystick via Bluetooth.
+    * **Publishes**:
+        * `/device/joyAndro` (`robot_interfaces/msg/JoyAndro`, 100Hz):
+            * `x`, `y`: Stick position.
+            * `button_x`, `button_circle`, `button_triangle`, `button_square`: Button states.
+    * **Note**: If there is no input, it continues to publish default data (all values 0 or false).
 
-D.  device/laser_node
-    -   Fungsi: Membaca data sensor jarak laser (serial/modbus).
-    -   Publish:
-        -   /device/laser/distances (std_msgs/Float32MultiArray): Data 5 probe sensor.
+* **C. `device/gpio_node`**
+    * **Function**: (Optional, can be disabled) Reads the state of hardware GPIO buttons.
+    * **Publishes**:
+        * `/device/gpio` (`std_msgs/UInt8MultiArray`): GPIO button status.
 
-E.  device/zlac8015_node
-    -   Fungsi: Driver motor CAN.
-    -   Subscribe:
-        -   /device/motor/cmd_vel (geometry_msgs/Twist): Perintah kecepatan.
-    -   Publish:
-        -   /device/motor/encoder, /rpm, /vbus: Data status motor.
+* **D. `device/laser_node`**
+    * **Function**: Reads data from the laser distance sensor (serial/modbus).
+    * **Publishes**:
+        * `/device/laser/distances` (`std_msgs/Float32MultiArray`): Data from the 5 sensor probes.
 
-F.  camera/yolo_node (yolov5.cpp)
-    -   Fungsi: Deteksi orang berbaju biru dengan YOLOv5 + filter HSV.
-    -   Publish:
-        -   /camera/detections (std_msgs/String): Data deteksi orang (format: "person_blue:confidence:x:y:width:height").
-        -   /camera/image_annotated (sensor_msgs/Image): Gambar dengan bounding box.
-    -   Subscribe:
-        -   /camera/image_raw (opsional): Untuk mode input dari topic.
+* **E. `device/zlac8015_node`**
+    * **Function**: CAN motor driver.
+    * **Subscribes**:
+        * `/device/motor/cmd_vel` (`geometry_msgs/Twist`): Velocity commands.
+    * **Publishes**:
+        * `/device/motor/encoder`, `/rpm`, `/vbus`: Motor status data.
 
-## Topic List & Penjelasan
-Topic	                Type	                        Direction	Keterangan
-/device/joyAndro	    robot_interfaces/msg/JoyAndro	pub	        Joystick Android
-/device/gpio	        std_msgs/UInt8MultiArray	    pub	        Tombol GPIO 
-/device/laser/distances	std_msgs/Float32MultiArray	    pub	        Sensor jarak
-/device/motor/cmd_vel	geometry_msgs/Twist	            sub	        Kecepatan motor
-/device/motor/encoder	std_msgs/Int32MultiArray	    pub	        Data encoder motor
-/device/motor/rpm	    std_msgs/Float32MultiArray	    pub	        Data RPM motor
-/device/motor/vbus	    std_msgs/Float32	            pub	        Tegangan bus motor
-/camera/detections	    std_msgs/String	                pub	        Data deteksi YOLO
-/camera/image_annotated	sensor_msgs/Image	            pub	        Gambar hasil deteksi
+* **F. `camera/yolo_node` (yolov5.cpp)**
+    * **Function**: Detects a person in a blue shirt using YOLOv5 + HSV filter.
+    * **Publishes**:
+        * `/camera/detections` (`std_msgs/String`): Detection data (format: `"person_blue:confidence:x:y:width:height"`).
+        * `/camera/image_annotated` (`sensor_msgs/Image`): Image with bounding boxes.
+    * **Subscribes**:
+        * `/camera/image_raw` (optional): For input mode from a topic.
 
+---
 
-## Cara Menjalankan Program
-A.  Build Workspace
+## 📊 Topic List & Descriptions
+
+| Topic                   | Message Type                     | Direction | Description            |
+| ----------------------- | -------------------------------- | --------- | ---------------------- |
+| `/device/joyAndro`      | `robot_interfaces/msg/JoyAndro`  | `pub`     | Android Joystick Data  |
+| `/device/gpio`          | `std_msgs/UInt8MultiArray`       | `pub`     | GPIO Button Status     |
+| `/device/laser/distances`| `std_msgs/Float32MultiArray`    | `pub`     | Distance Sensor Data   |
+| `/device/motor/cmd_vel` | `geometry_msgs/Twist`            | `sub`     | Motor Velocity Command |
+| `/device/motor/encoder` | `std_msgs/Int32MultiArray`       | `pub`     | Motor Encoder Data     |
+| `/device/motor/rpm`     | `std_msgs/Float32MultiArray`     | `pub`     | Motor RPM Data         |
+| `/device/motor/vbus`    | `std_msgs/Float32`               | `pub`     | Motor Bus Voltage      |
+| `/camera/detections`    | `std_msgs/String`                | `pub`     | YOLO Detection Data    |
+| `/camera/image_annotated`| `sensor_msgs/Image`             | `pub`     | Annotated Image Feed   |
+
+---
+
+## 🚀 How to Run the Program
+
+* **A. Build the Workspace**
+    ```bash
     cd ~/pal_ws
     colcon build --symlink-install
-    atau
-    colcon build --symlink-install --packages-select nama_package
+    
+    # or build a specific package
+    # colcon build --symlink-install --packages-select <package_name>
+    
     source install/setup.bash
+    ```
 
-B.  Jalankan Device 
+* **B. Launch Devices**
+    ```bash
     ros2 launch device device.launch.py
-    -   Akan menjalankan: gpio_node (opsional), joyandro_node, zlac8015_node, laser_node.
+    ```
+    *This will run: `gpio_node` (optional), `joyandro_node`, `zlac8015_node`, `laser_node`.*
 
-C.  Jalankan Kamera (YOLO)
+* **C. Launch Camera (YOLO)**
+    ```bash
     ros2 launch camera camera.launch.py
-    Akan menjalankan: yolo_node (YOLOv5 deteksi orang berbaju biru).
+    ```
+    *This will run: `yolo_node` (YOLOv5 detection for people in blue shirts).*
 
-D.  Jalankan Main Robot Controller
+* **D. Launch the Main Robot Controller**
+    ```bash
     ros2 launch robot robot.launch.py
+    ```
 
-E.  Monitoring
-    Joystick:
+* **E. Monitoring**
+    * **Joystick**:
+        ```bash
         ros2 topic echo /device/joyAndro
-    Motor Command:
+        ```
+    * **Motor Command**:
+        ```bash
         ros2 topic echo /device/motor/cmd_vel
-    YOLO Detection:
+        ```
+    * **YOLO Detection**:
+        ```bash
         ros2 topic echo /camera/detections
-    Laser:
+        ```
+    * **Laser**:
+        ```bash
         ros2 topic echo /device/laser/distances
+        ```
 
-F.  Web Video Stream
-    Jika menggunakan web_video_server:
-    http://<robot_ip>:8080/stream?topic=/camera/image_annotated
+* **F. Web Video Stream**
+    * If using `web_video_server`:
+        `http://<robot_ip>:8080/stream?topic=/camera/image_annotated`
 
-## Kontrol
-Manual (Joystick Android):
-    Stick X/Y: Linear/angular velocity
-    X: AUTO mode (person following)
-    O: MANUAL mode (joystick)
-    Triangle: IDLE mode (stop)
-    Square: BOOST (kecepatan dobel saat ditekan)
-AUTO: Robot mengikuti orang berbaju biru (YOLO + laser safety)
+---
 
-## Konfigurasi Warna (color_config.yaml)
-    File: color_config.yaml
-        Mengatur HSV threshold untuk deteksi biru (default) pada YOLO.
+## 🎮 Controls
+
+* **Manual (Android Joystick)**:
+    * Stick X/Y: Linear/angular velocity
+    * X: `AUTO` mode (person following)
+    * O: `MANUAL` mode (joystick)
+    * Triangle: `IDLE` mode (stop)
+    * Square: `BOOST` (doubles speed while pressed)
+
+* **AUTO**:
+    * The robot follows a person in a blue shirt (YOLO + laser safety).
+
+---
+
+## ⚙️ Color Configuration (`color_config.yaml`)
+
+* **File**: `color_config.yaml`
+* **Function**: Sets the HSV threshold for blue color detection (default) in YOLO.
