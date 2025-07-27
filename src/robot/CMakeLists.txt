@@ -13,12 +13,14 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(robot_interfaces REQUIRED)
 
 add_executable(main_node src/main.cpp)
 ament_target_dependencies(main_node 
   rclcpp 
   std_msgs 
-  geometry_msgs)
+  geometry_msgs
+  robot_interfaces)
 
 install(TARGETS
   main_node

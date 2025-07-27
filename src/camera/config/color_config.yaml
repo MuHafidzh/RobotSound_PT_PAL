@@ -3,11 +3,11 @@ detection:
   # Blue color detection in HSV
   blue:
     lower_hue: 105        # Lebih tinggi untuk biru tua
-    upper_hue: 140        # Range sempit untuk biru tua spesifik
-    lower_saturation: 50  # Tinggi untuk warna jenuh
+    upper_hue: 120        # Range sempit untuk biru tua spesifik
+    lower_saturation: 30  # Tinggi untuk warna jenuh
     upper_saturation: 255 # Maksimal
-    lower_value: 40       # Rendah untuk biru yang gelap
-    upper_value: 150      # Tidak terlalu terang untuk biru tua
+    lower_value: 67       # Rendah untuk biru yang gelap
+    upper_value: 205      # Tidak terlalu terang untuk biru tua
     min_percentage: 12.0  # Turunkan sedikit dari 18.0
 
 # YOLO Detection Parameters

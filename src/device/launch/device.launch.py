@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, TimerAction
 from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
 
 def generate_launch_description():
     return LaunchDescription([
@@ -21,6 +22,16 @@ def generate_launch_description():
             default_value='can0',
             description='CAN interface for motor driver'
         ),
+        DeclareLaunchArgument(
+            'enable_gpio',
+            default_value='false',
+            description='Enable GPIO control for motor driver'
+        ),
+        DeclareLaunchArgument(
+            'enable_joyandro',
+            default_value='true',
+            description='Enable JoyAndro bluetooth controller'
+        ),
         
         # GPIO Node - Start first (fastest to initialize)
         Node(
@@ -30,16 +41,34 @@ def generate_launch_description():
             output='log',
             parameters=[],
             respawn=True,
-            respawn_delay=2.0
+            respawn_delay=2.0,
+            condition=IfCondition(LaunchConfiguration('enable_gpio'))
         ),
         
-        # Motor Driver Node - Start after GPIO (needs CAN)
+        # JoyAndro Node - Start after GPIO
+        TimerAction(
+            period=1.0,  # Wait 1 second after GPIO
+            actions=[
+                Node(
+                    package='device',
+                    executable='joyandro_node',
+                    name='joyandro_node',
+                    output='log',
+                    parameters=[],
+                    respawn=True,
+                    respawn_delay=3.0,
+                    condition=IfCondition(LaunchConfiguration('enable_joyandro'))
+                )
+            ]
+        ),
+        
+        # Motor Driver Node - Start after GPIO
         TimerAction(
             period=2.0,  # Wait 2 seconds after GPIO
             actions=[
                 Node(
                     package='device',
-                    executable='zlac8015_node',  # Pastikan nama ini sama dengan CMakeLists.txt
+                    executable='zlac8015_node',
                     name='zlac8015_node',
                     output='log',
                     parameters=[
@@ -54,7 +83,7 @@ def generate_launch_description():
             ]
         ),
         
-        # Laser Node - Start after motor (needs serial port)
+        # Laser Node - Start after motor
         TimerAction(
             period=5.0,  # Wait 5 seconds after GPIO
             actions=[

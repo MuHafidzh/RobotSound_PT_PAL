@@ -1,10 +1,10 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <std_msgs/msg/u_int8_multi_array.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/int32_multi_array.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <robot_interfaces/msg/joy_andro.hpp>
 #include <chrono>
 #include <vector>
 #include <string>
@@ -31,16 +31,6 @@ public:
         current_state_ = RobotState::IDLE;
         auto_state_ = AutoState::STOPPED;
         
-        // Initialize GPIO states
-        gpio_states_ = {0, 0, 0, 0}; // a, b, c, d
-        prev_gpio_states_ = {0, 0, 0, 0}; // previous states for edge detection
-        
-        // Initialize manual movement states (toggle states)
-        manual_forward_ = false;
-        manual_backward_ = false;
-        manual_left_ = false;
-        manual_right_ = false;
-        
         // Initialize other sensor data
         laser_distances_ = {0.0, 0.0, 0.0, 0.0, 0.0};
         motor_encoders_ = {0, 0};
@@ -48,8 +38,13 @@ public:
         motor_vbus_ = 0.0;
         
         // Manual control velocities - constant speeds
-        linear_speed_ = 0.3;   // m/s
+        linear_speed_ = 0.5;   // m/s
         angular_speed_ = 2.0;  // rad/s
+
+        // Initialize joystick control
+        joy_x_ = 0.0f;
+        joy_y_ = 0.0f;
+        boost_active_ = false;
         
         // Auto mode parameters (could be moved to launch file)
         target_distance_ = this->declare_parameter("auto.target_distance", 1.0);  // meters
@@ -80,10 +75,10 @@ public:
         person_confidence_ = 0.0;
         
         // Subscribers
-        gpio_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
-            "/device/gpio", 1,
-            std::bind(&RobotMainNode::gpio_callback, this, std::placeholders::_1));
-            
+        joy_sub_ = this->create_subscription<robot_interfaces::msg::JoyAndro>(
+            "/device/joyAndro", 1,
+            std::bind(&RobotMainNode::joy_callback, this, std::placeholders::_1));
+
         yolo_sub_ = this->create_subscription<std_msgs::msg::String>(
             "/camera/detections", 1,
             std::bind(&RobotMainNode::yolo_callback, this, std::placeholders::_1));
@@ -118,8 +113,6 @@ public:
             std::bind(&RobotMainNode::status_loop, this));
         
         RCLCPP_INFO(this->get_logger(), "Robot Main Node initialized in IDLE state");
-        RCLCPP_INFO(this->get_logger(), "Controls: A+B=Manual | C+D=Idle | B+D=Auto");
-        RCLCPP_INFO(this->get_logger(), "Manual: A=Forward | B=Backward | C=Left | D=Right (TOGGLE)");
         RCLCPP_INFO(this->get_logger(), "Auto Mode Parameters:");
         RCLCPP_INFO(this->get_logger(), "  Target Distance: %.2f m", target_distance_);
         RCLCPP_INFO(this->get_logger(), "  Min Distance: %.2f m", min_distance_);
@@ -135,19 +128,34 @@ public:
     }
 
 private:
-    void gpio_callback(const std_msgs::msg::UInt8MultiArray::SharedPtr msg)
+    void joy_callback(const robot_interfaces::msg::JoyAndro::SharedPtr msg)
     {
-        if (msg->data.size() >= 4) {
-            prev_gpio_states_ = gpio_states_;
-            gpio_states_ = {msg->data[0], msg->data[1], msg->data[2], msg->data[3]}; // a, b, c, d
-            
-            check_state_transitions();
-            
-            // Handle manual control button presses (only in manual mode)
-            if (current_state_ == RobotState::MANUAL) {
-                handle_manual_button_presses();
+        // Update joystick values
+        joy_x_ = msg->x;
+        joy_y_ = msg->y;
+        
+        // Handle button presses for state changes (immediate action, no state needed)
+        if (msg->button_triangle) {
+            // Triangle -> IDLE
+            if (current_state_ != RobotState::IDLE) {
+                change_state(RobotState::IDLE);
             }
         }
+        else if (msg->button_circle) {
+            // Circle (O) -> MANUAL  
+            if (current_state_ != RobotState::MANUAL) {
+                change_state(RobotState::MANUAL);
+            }
+        }
+        else if (msg->button_x) {
+            // X -> AUTO
+            if (current_state_ != RobotState::AUTO) {
+                change_state(RobotState::AUTO);
+            }
+        }
+        
+        // Handle boost button (Square)
+        boost_active_ = msg->button_square;
     }
     
     void yolo_callback(const std_msgs::msg::String::SharedPtr msg)
@@ -248,91 +256,19 @@ private:
     {
         motor_vbus_ = msg->data;
     }
-    
-    void check_state_transitions()
-    {
-        // Check current button combinations (real-time, high when pressed)
-        bool a = gpio_states_[0];  // A button
-        bool b = gpio_states_[1];  // B button  
-        bool c = gpio_states_[2];  // C button
-        bool d = gpio_states_[3];  // D button
-        
-        // State transitions based on button combinations
-        if (a && b) {
-            // A+B pressed -> Manual mode
-            if (current_state_ != RobotState::MANUAL) {
-                change_state(RobotState::MANUAL);
-            }
-        }
-        else if (c && d) {
-            // C+D pressed -> Idle mode
-            if (current_state_ != RobotState::IDLE) {
-                change_state(RobotState::IDLE);
-            }
-        }
-        else if (b && d) {
-            // B+D pressed -> Auto mode
-            if (current_state_ != RobotState::AUTO) {
-                change_state(RobotState::AUTO);
-            }
-        }
-    }
-    
-    void handle_manual_button_presses()
-    {
-        // Detect button press events (rising edge: prev=0, current=1)
-        bool a_pressed = (gpio_states_[0] && !prev_gpio_states_[0]);
-        bool b_pressed = (gpio_states_[1] && !prev_gpio_states_[1]);
-        bool c_pressed = (gpio_states_[2] && !prev_gpio_states_[2]);
-        bool d_pressed = (gpio_states_[3] && !prev_gpio_states_[3]);
-        
-        // Toggle movement states on button press
-        if (a_pressed) {
-            manual_forward_ = !manual_forward_;
-            if (manual_forward_) {
-                manual_backward_ = false; // Stop backward jika forward aktif
-            }
-            RCLCPP_INFO(this->get_logger(), "Forward: %s", manual_forward_ ? "ON" : "OFF");
-        }
-        
-        if (b_pressed) {
-            manual_backward_ = !manual_backward_;
-            if (manual_backward_) {
-                manual_forward_ = false; // Stop forward jika backward aktif
-            }
-            RCLCPP_INFO(this->get_logger(), "Backward: %s", manual_backward_ ? "ON" : "OFF");
-        }
-        
-        if (c_pressed) {
-            manual_left_ = !manual_left_;
-            if (manual_left_) {
-                manual_right_ = false; // Stop right jika left aktif
-            }
-            RCLCPP_INFO(this->get_logger(), "Left: %s", manual_left_ ? "ON" : "OFF");
-        }
-        
-        if (d_pressed) {
-            manual_right_ = !manual_right_;
-            if (manual_right_) {
-                manual_left_ = false; // Stop left jika right aktif
-            }
-            RCLCPP_INFO(this->get_logger(), "Right: %s", manual_right_ ? "ON" : "OFF");
-        }
-    }
-    
+     
     void change_state(RobotState new_state)
     {
         current_state_ = new_state;
         
-        // Stop robot dan reset manual states when changing states
+        // Stop robot when changing states  
         stop_robot();
-        reset_manual_states();
         
         // Initialize auto state
         if (new_state == RobotState::AUTO) {
             auto_state_ = AutoState::STOPPED;
-            search_start_time_ = this->now(); // Initialize timing for STOPPED state
-            search_direction_ = 1; // Start search to the right
+            search_start_time_ = this->now();
+            search_direction_ = 1;
             RCLCPP_INFO(this->get_logger(), "AUTO mode activated - STOPPED, waiting for person or timeout");
         }
         
@@ -350,14 +286,6 @@ private:
         }
         
         RCLCPP_INFO(this->get_logger(), "State changed to: %s", state_name.c_str());
-    }
-    
-    void reset_manual_states()
-    {
-        manual_forward_ = false;
-        manual_backward_ = false;
-        manual_left_ = false;
-        manual_right_ = false;
     }
     
     void control_loop()
@@ -385,31 +313,40 @@ private:
     {
         geometry_msgs::msg::Twist cmd_vel;
         
-        // Manual control berdasarkan toggle states:
-        // Linear movement (maju/mundur)
-        if (manual_forward_) {
-            cmd_vel.linear.x = linear_speed_;
-        }
-        else if (manual_backward_) {
-            cmd_vel.linear.x = -linear_speed_;
-        }
-        else {
+        // Manual control menggunakan joystick Android
+        // joy_y untuk linear movement (forward/backward)
+        // joy_x untuk angular movement (left/right)
+        if (std::abs(joy_y_) < 0.1)
+        {
             cmd_vel.linear.x = 0.0;
+            cmd_vel.angular.z = joy_x_ * angular_speed_;
+        }
+        else{
+            cmd_vel.linear.x = joy_y_ * linear_speed_;   // Forward/backward
+            if (joy_y_ < 0.0) {
+                cmd_vel.angular.z = -joy_x_ * angular_speed_;
+            } else {
+                cmd_vel.angular.z = joy_x_ * angular_speed_;
+            }
+            // cmd_vel.angular.z = joy_x_ * angular_speed_; // Left/right rotation
         }
         
-        // Angular movement (kiri/kanan)
-        if (manual_left_) {
-            cmd_vel.angular.z = angular_speed_;
-        }
-        else if (manual_right_) {
-            cmd_vel.angular.z = -angular_speed_;
-        }
-        else {
-            cmd_vel.angular.z = 0.0;
+        // Apply boost if Square button pressed
+        if (boost_active_) {
+            cmd_vel.linear.x *= 2.0;  // Double linear speed
+            cmd_vel.angular.z *= 2.0; // 1.5x angular speed
         }
         
-        // Kombinasi dimungkinkan: forward+left, backward+right, dll
+        // Apply safety limits
+        cmd_vel.linear.x = std::max(-max_linear_speed_, std::min(max_linear_speed_, cmd_vel.linear.x));
+        cmd_vel.angular.z = std::max(-4.0, std::min(4.0, cmd_vel.angular.z));
+        
         cmd_vel_pub_->publish(cmd_vel);
+        
+        // Debug log
+        RCLCPP_DEBUG(this->get_logger(), 
+            "Manual Control: joy_x=%.2f, joy_y=%.2f, boost=%s, linear=%.2f, angular=%.2f",
+            joy_x_, joy_y_, boost_active_ ? "ON" : "OFF", cmd_vel.linear.x, cmd_vel.angular.z);
     }
     
     void handle_auto_state()
@@ -649,24 +586,18 @@ private:
             auto_status += " | Timer: " + std::to_string(static_cast<int>(timer_time)) + "s";
         }
         
-        // Status log dengan manual states info
-        std::string manual_status = "";
+        // JoyAndro status
+        std::string joy_status = "";
         if (current_state_ == RobotState::MANUAL) {
-            manual_status = " | Manual: ";
-            if (manual_forward_) manual_status += "FWD ";
-            if (manual_backward_) manual_status += "BWD ";
-            if (manual_left_) manual_status += "LEFT ";
-            if (manual_right_) manual_status += "RIGHT ";
-            if (!manual_forward_ && !manual_backward_ && !manual_left_ && !manual_right_) {
-                manual_status += "STOP ";
-            }
+            joy_status = " | Joy: X=" + std::to_string(joy_x_).substr(0,4) + 
+                        " Y=" + std::to_string(joy_y_).substr(0,4);
+            if (boost_active_) joy_status += " BOOST";
         }
         
         RCLCPP_INFO(this->get_logger(), 
-            "State: %s | GPIO: A=%d B=%d C=%d D=%d%s%s | Laser: [%.1f, %.1f, %.1f, %.1f, %.1f] | VBUS: %.2fV",
+            "State: %s%s%s | Laser: [%.1f, %.1f, %.1f, %.1f, %.1f] | VBUS: %.2fV",
             state_name.c_str(),
-            gpio_states_[0], gpio_states_[1], gpio_states_[2], gpio_states_[3],
-            manual_status.c_str(),
+            joy_status.c_str(),
             auto_status.c_str(),
             laser_distances_[0], laser_distances_[1], laser_distances_[2], laser_distances_[3], laser_distances_[4],
             motor_vbus_);
@@ -676,15 +607,10 @@ private:
     RobotState current_state_;
     AutoState auto_state_;
     
-    // GPIO states (a, b, c, d) - current and previous for edge detection
-    std::vector<uint8_t> gpio_states_;
-    std::vector<uint8_t> prev_gpio_states_;
-    
-    // Manual control toggle states
-    bool manual_forward_;
-    bool manual_backward_;
-    bool manual_left_;
-    bool manual_right_;
+    // JoyAndro control variables
+    float joy_x_;
+    float joy_y_;
+    bool boost_active_;
     
     // Auto mode parameters
     double target_distance_;
@@ -724,7 +650,7 @@ private:
     double angular_speed_;
     
     // ROS2 interfaces
-    rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr gpio_sub_;
+    rclcpp::Subscription<robot_interfaces::msg::JoyAndro>::SharedPtr joy_sub_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr yolo_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr laser_sub_;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr encoder_sub_;
