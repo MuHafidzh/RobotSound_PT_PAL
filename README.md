@@ -1,7 +1,8 @@
-A robot with a sound system that tracks a person wearing a color shirt.
+# 🤖 A robot with a sound system that tracks a person wearing a color shirt.
 
-# ================================================= #
-1.  Workspace Structure
+## 🎥 Demo & Screenshot
+
+## 📁 Workspace Structure
 
     pal_ws/
     ├── src/
@@ -12,15 +13,17 @@ A robot with a sound system that tracks a person wearing a color shirt.
     ├── start.sh                  # Bash script for setup IO and robotPAL.service 
     └── README.md
 
-2.  Custom Message
-    robot_interfaces/msg/JoyAndro.msg
-        std_msgs/Header header
-        float32 x
-        float32 y
-        bool button_x
-        bool button_circle
-        bool button_triangle
-        bool button_square
+## 📦 Custom Message
+
+**robot_interfaces/msg/JoyAndro.msg**
+```text
+std_msgs/Header header
+float32 x
+float32 y
+bool button_x
+bool button_circle
+bool button_triangle
+bool button_square
 
 3.  Node Explanation
     A.  robot/main_node (main.cpp)
