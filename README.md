@@ -5,11 +5,7 @@ A ROS 2 project for an autonomous robot that can track and follow a person weari
 ---
 
 ## 🎥 Demo
-
-**(Note: To display a video here, you can upload `pal.mp4` to your repository and link to it, or convert it to a GIF and embed it like an image.)**
-
-Example with a GIF:
-`![Robot Demo](pal.gif)`
+![Robot Demo](pal.gif)
 
 ---
 
