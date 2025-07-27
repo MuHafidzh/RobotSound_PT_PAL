@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#2D2D2D">
+
+    <!-- Top Menu Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal"
+        android:background="#1F1F1F"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:elevation="4dp">
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:text="Not Connected"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp" />
+
+        <Button
+            android:id="@+id/scanButton"
+            android:layout_width="60dp"
+            android:layout_height="match_parent"
+            android:text="Scan"
+            android:textSize="10sp"
+            android:backgroundTint="#404040"
+            android:layout_marginEnd="4dp" />
+
+        <Spinner
+            android:id="@+id/deviceSpinner"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.5"
+            android:background="#404040"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/connectButton"
+            android:layout_width="80dp"
+            android:layout_height="match_parent"
+            android:text="Connect"
+            android:textSize="10sp"
+            android:backgroundTint="#505050" />
+
+    </LinearLayout>
+
+    <!-- Game Controls Area -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#2D2D2D"
+        android:padding="16dp">
+
+        <!-- Left Side - Joystick -->
+        <LinearLayout
+            android:id="@+id/joystickContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="40dp"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <!-- Joystick with proper margins -->
+            <com.example.joystickcontroller.ui.JoystickView
+                android:id="@+id/joystickView"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
+                android:layout_margin="15dp" />
+
+            <!-- Joystick Value Display - Keep this -->
+            <TextView
+                android:id="@+id/joystickValueText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X: 0.00, Y: 0.00"
+                android:textSize="14sp"
+                android:textColor="#00FF00"
+                android:gravity="center"
+                android:background="#404040"
+                android:padding="8dp"
+                android:layout_marginTop="8dp" />
+
+        </LinearLayout>
+
+        <!-- Right Side - Action Buttons Container -->
+        <RelativeLayout
+            android:id="@+id/buttonContainer"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="80dp">
+
+            <!-- Triangle Button (Top Center) -->
+            <com.example.joystickcontroller.ui.GameButton
+                android:id="@+id/triangleButton"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true" />
+
+            <!-- Square Button (Middle Left) -->
+            <com.example.joystickcontroller.ui.GameButton
+                android:id="@+id/squareButton"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true" />
+
+            <!-- Circle Button (Middle Right) -->
+            <com.example.joystickcontroller.ui.GameButton
+                android:id="@+id/circleButton"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true" />
+
+            <!-- X Button (Bottom Center) -->
+            <com.example.joystickcontroller.ui.GameButton
+                android:id="@+id/xButton"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true" />
+
+        </RelativeLayout>
+
+    </RelativeLayout>
+
+</LinearLayout>

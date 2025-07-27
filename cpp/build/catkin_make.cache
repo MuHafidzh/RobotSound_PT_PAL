@@ -1,0 +1,2 @@
+joy_andro
+-DCATKIN_DEVEL_PREFIX=/home/nakanomiku/AndroidStudioProjects/JoystickController/cpp/devel -DCMAKE_INSTALL_PREFIX=/home/nakanomiku/AndroidStudioProjects/JoystickController/cpp/install -G Unix Makefiles

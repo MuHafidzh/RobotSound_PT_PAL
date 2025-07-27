@@ -1,0 +1,8 @@
+prefix=/home/nakanomiku/AndroidStudioProjects/JoystickController/cpp/devel
+
+Name: joy_andro
+Description: Description of joy_andro
+Version: 0.0.0
+Cflags: -I/home/nakanomiku/AndroidStudioProjects/JoystickController/cpp/devel/include
+Libs: -L${prefix}/lib 
+Requires: roscpp std_msgs message_runtime
