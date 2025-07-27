@@ -183,3 +183,31 @@ bool button_square
 
 * **File**: `color_config.yaml`
 * **Function**: Sets the HSV threshold for blue color detection (default) in YOLO.
+
+## 🤖 robotPAL.service
+You can manage the robot's service using `systemctl`.
+
+* **Check the service file:**
+    ```bash
+    sudo nano /etc/systemd/system/robotpal.service
+    ```
+
+* **Reload systemd after changes:**
+    ```bash
+    sudo systemctl daemon-reload
+    ```
+
+* **Start the service:**
+    ```bash
+    sudo systemctl start robotpal.service
+    ```
+
+* **Stop the service:**
+    ```bash
+    sudo systemctl stop robotpal.service
+    ```
+
+* **Restart the service:**
+    ```bash
+    sudo systemctl restart robotpal.service
+
